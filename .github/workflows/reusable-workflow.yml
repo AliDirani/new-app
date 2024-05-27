@@ -1,0 +1,52 @@
+name: Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: true
+        type: string
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ inputs.node-version }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ inputs.node-version }}-
+            ${{ runner.os }}-build-
+
+      - name: Install dependencies
+        run: npm install
+        env:
+          NODE_VERSION: ${{ inputs.node-version }}
+
+      - name: Build
+        run: npm run build
+
+      - name: Create output directory
+        run: mkdir -p ./output
+
+      - name: Copy application files
+        run: cp -r * ./output
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ inputs.node-version }}
+          path: ./output
+
